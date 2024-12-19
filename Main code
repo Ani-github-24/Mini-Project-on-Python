@@ -1,0 +1,81 @@
+import pandas as pd
+import tkinter as tk
+from tkinter import messagebox
+
+def study():
+    try:
+        study_hours = int(entry_hours.get())
+        subjects = entry_subjects.get().split(",")
+        difficulties = entry_difficulties.get().split(",")
+        
+        if len(subjects) != len(difficulties):
+            raise ValueError("Number of subjects and difficulties must match.")
+        difficulties = [int(d) for d in difficulties]
+        if not all(1 <= d <= 5 for d in difficulties):
+            raise ValueError("Difficulty levels must be between 1 and 5.")
+        
+        data = pd.DataFrame({
+            'Subject': [s.strip() for s in subjects],
+            'Difficulty': difficulties
+        })
+        
+        total_minutes = study_hours * 60
+        data['Study_Time'] = (data['Difficulty'] / data['Difficulty'].sum()) * total_minutes
+        
+        plan = []
+        time_accumulator = 0
+        for _, row in data.iterrows():
+            plan.append((row['Subject'], int(row['Study_Time'])))
+            time_accumulator += row['Study_Time']
+            if time_accumulator >= 90:
+                plan.append(("Break", 15))
+                time_accumulator = 0
+
+        display_plan(plan)
+
+    except ValueError as e:
+        messagebox.showerror("Input Error", str(e))
+    except Exception as e:
+        messagebox.showerror("Error", f"An unexpected error occurred: {e}")
+
+def format_time(minutes):
+    hours = minutes // 60
+    mins = minutes % 60
+    return f"{hours} hour(s) {mins} minute(s)" if hours > 0 else f"{mins} minute(s)"
+
+def display_plan(plan):
+    results_text.delete(1.0, tk.END)
+    results_text.insert(tk.END, "Final Study Plan with Breaks:\n")
+    for task, minutes in plan:
+        results_text.insert(tk.END, f"{task}: {format_time(minutes)}\n")
+
+root = tk.Tk()
+root.title("Intelligent Study Planner")
+root.geometry("500x600")
+
+frame_inputs = tk.Frame(root)
+frame_inputs.pack(pady=10)
+
+tk.Label(frame_inputs, text="Total Study Hours:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+entry_hours = tk.Entry(frame_inputs)
+entry_hours.grid(row=0, column=1, padx=5, pady=5)
+
+tk.Label(frame_inputs, text="Subjects (comma-separated):").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+entry_subjects = tk.Entry(frame_inputs, width=40)
+entry_subjects.grid(row=1, column=1, padx=5, pady=5)
+
+tk.Label(frame_inputs, text="Difficulty Levels (comma-separated):").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+entry_difficulties = tk.Entry(frame_inputs, width=40)
+entry_difficulties.grid(row=2, column=1, padx=5, pady=5)
+
+btn_calculate = tk.Button(root, text="Generate Study Plan", command=study, bg="blue", fg="white")
+btn_calculate.pack(pady=10)
+
+frame_results = tk.Frame(root)
+frame_results.pack(pady=10)
+
+tk.Label(frame_results, text="Study Plan:").pack()
+results_text = tk.Text(frame_results, height=20, width=60, wrap=tk.WORD)
+results_text.pack()
+
+root.mainloop()
